@@ -1,0 +1,5 @@
+# pip install requests aiogram beautifulsoup4
+
+requests~=2.31.0
+aiogram~=2.25.1
+beautifulsoup4~=4.12.2
