@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from bs4 import BeautifulSoup
 
 import config
+import url
 # import parser
 
 
@@ -75,27 +76,63 @@ def get_html(staff_id):
             table = soup.find_all('tr', class_="cursor_pointer")
             # print(table)
             answer = []
+            date_start = ""
+            date_arr = ""
+            date_time = ""
             for i in table:  # Цикл по списку всей таблицы
-                answer_i = []
                 print("########################")
                 # print(i)
-                # list_a = i.find_all('a')  # Ищем ссылки во всей таблице
-                # for ii in list_a:  # Цикл по найденным ссылкам
-                #     if len(ii.text) == 7:  # Ищем похожесть на ид ремонта
-                #         print(ii.text)
+                list_a = i.find_all('a')  # Ищем ссылки во всей таблице
+                conn_link = ""
+                number_conn = ""
+                for ii in list_a:  # Цикл по найденным ссылкам
+                    # print(ii)
+                    if len(ii.text) == 7:  # Ищем похожесть на ид ремонта
+                        # print(ii.text)
+                        number_conn = ii.text
+                        conn_link = url.url_link_repair + number_conn
                 ceil_date = i.find_all('td', class_="div_center")
                 if ceil_date[1].text[-11:-1] == "просрочено":
-                    answer_i.append(ceil_date[1].text[:-11])
-                    print(ceil_date[1].text[:-11])
+                    date = ceil_date[1].text[:-11].strip()
+                    # print(ceil_date[1].text[:-11])
                 else:
-                    print(ceil_date[1].text)
-                    answer_i.append(ceil_date[1].text)
-                ceil = i.find_all('td', class_="")
-                print(ceil[1].text)
-                answer_i.append(ceil[1].text)
-                # for c in ceil:
+                    # print(ceil_date[1].text)
+                    date = ceil_date[1].text.strip()
+                # ceil = i.find_all('td', class_="")
+                ceil_id = i.find(id=f"td_{number_conn}_address_full_Id")
+                # print(f"ceil_id {ceil_id.text}")
+                # print(ceil[1].text)
+                address = ceil_id.text.strip()
+                address_split = address.split(" ")
+                address_arr = []
+                for s in address_split:
+                    if s != '':
+                        address_arr.append(s)
+                    else:
+                        break
+                print(address_split)
+                print(address_arr)
+                address_f = ' '.join(address_arr)
+                # for c in ceil: f"{date[:-5]}\n\n"
                 #     print(c)
-                answer.append(answer_i)
+                if date_time == date[-5:]:
+                    date_time = "!!! Внимание, есть другая заявка на: " + date_time
+                else:
+                    date_time = date[-5:]
+                one = (f"{date_time}\n\n"
+                       f"{address_f}\n\n"
+                       f"{conn_link}\n\n"
+                       f"###########################\n\n")
+                if date_start == date[:-5]:  # Тот же день
+                    print("Дата совпала")
+                    date_arr += one
+                else:
+                    if date_arr != "":
+                        answer.append(date_arr)
+                    date_start = date[:-5]
+                    date_arr = f"{date[:-5]}\n\n"
+                    date_arr += one
+                # print(date_arr)
             return answer
         else:
             print("error")
@@ -115,7 +152,8 @@ async def echo_mess(message: types.Message):
     print(f"user_id {user_id}")
     if user_id in config.users:
         print("Пользователь авторизован.")
-        answer = get_html(855)
+        # answer = get_html(855)
+        answer = get_html(message.text)
         print(f"answer: {answer}")
         try:
             for a in answer:
