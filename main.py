@@ -56,6 +56,12 @@ async def echo_mess(message: types.Message):
     await bot.send_message(message.chat.id, f"test")
 
 
+# Тестовая функция
+@dp.message_handler(commands=['help'])
+async def echo_mess(message: types.Message):
+    await bot.send_message(message.chat.id, f"{config.users_dict}")
+
+
 def get_html(staff_id):
     print("Смотрим ссылку.")
     link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
@@ -153,14 +159,31 @@ async def echo_mess(message: types.Message):
     if user_id in config.users:
         print("Пользователь авторизован.")
         # answer = get_html(855)
-        answer = get_html(message.text)
-        print(f"answer: {answer}")
-        try:
-            for a in answer:
-                await bot.send_message(message.chat.id, a)
-        except:
-            print(f"{datetime.now()}: Ошибка с получением ответа от парсера")
-            await bot.send_message(message.chat.id, f"Ответ: Ошибка с получением ответа от парсера")
+        if message.text.isdigit():
+            answer = get_html(message.text)
+            print(f"answer: {answer}")
+            try:
+                for a in answer:
+                    await bot.send_message(message.chat.id, a)
+            except:
+                print(f"{datetime.now()}: Ошибка с получением ответа от парсера")
+                await bot.send_message(message.chat.id, f"Ответ: Ошибка с получением ответа от парсера")
+        else:
+            print("Не число")
+            if message.text.lower() == "перенести":
+                text_msg = message.reply_to_message.text
+                # Разделим сообщение по переносу строки
+                # Адрес будем брать как 4 элемент. А ссылку как 8 элемент.
+                text_msg_list = text_msg.split("\n")
+                print(f"text_msg: {text_msg}")
+                print(f"text_msg_list: {text_msg_list}")
+                print(f"text_msg_list: {text_msg_list[4]}")
+                print(f"text_msg_list: {text_msg_list[7]}")
+                await bot.send_message(message.chat.id,
+                                       f"Переносим адрес: \n\n"
+                                       f"{text_msg_list[4]} \n\n"
+                                       f"Выберите время:")
+
     else:
         await bot.send_message(message.chat.id, "Вы не авторизованны")
 
