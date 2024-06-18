@@ -12,6 +12,7 @@ import config
 import url
 import links
 # import parser
+import free_time
 
 
 session = requests.Session()
@@ -95,6 +96,7 @@ def get_html(staff_id, type_req, search_date):
             date_start = ""  # День
             date_arr = ""   # Полный список. Время, адрес, ссылка.
             date_time = ""  # Время
+            # cur_shelude = ""  # Занятое расписание Сохраняется в обычный ответ
             for i in table:  # Цикл по списку всей таблицы
                 print("########################")
                 # print(i)
@@ -143,7 +145,15 @@ def get_html(staff_id, type_req, search_date):
                                f"{address_f}\n\n"
                                f"{conn_link}\n\n")
                 # Ответ для составления расписания = shelude.
-                one_for_shelude = [date_start, date_time, address_f, conn_link[:-8]]
+                # Для составления расписания будем использовать дату без приписки дня(из 2 букв)
+                # Для этого разделим по пробелу и возьмем первый элемент.
+                date_sh = date_start.split(" ")
+                # Для времени возьмем только часы.
+                time_hour = date_time.split(":")
+                time_hour = time_hour[0]
+                # one_for_shelude = [date_sh[0], date_time, address_f, conn_link[:-8]]
+                # Сохраним только дату и часы
+                one_for_shelude = [date_sh[0], time_hour]
                 # Добавления в список нужного ответа.
                 if type_req == "req":
                     if search_date:  # Если есть дата, то используем только ее.
@@ -268,6 +278,12 @@ async def echo_mess(message: types.Message):
             #         print(len(message.text))
             if message.text.lower() == "перенести":
                 # Сделаем запрос к заявкам, чтобы составить расписание.
+                answer = get_html(config.users_id_dict[user_id], "shelude", "")
+                # Поиск свободного времени
+                # TODO используем заглушку на номер дома
+                free_slots = free_time.free_time(answer, 15517)
+                print(f"free_slots {free_slots}")
+                print(f"answer {answer}")
                 # answer = get_html()
                 text_msg = message.reply_to_message.text
                 # Разделим сообщение по переносу строки
@@ -288,10 +304,12 @@ async def echo_mess(message: types.Message):
                 # list_buts = [("10:00 20.06.2024", "10:00 20.06.2024"),
                 #              ("12:00 20.06.2024", "10:00 20.06.2024"),
                 #              ("10:00 21.06.2024", "10:00 21.06.2024")]
-                list_time = [[f"{t}:00 21.06.2024", f"{t}:00 21.06.2024"] for t in range(10, 17)]
+                # list_time = [[f"{t}:00 21.06.2024", f"{t}:00 21.06.2024"] for t in range(10, 17)]
+                list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {t[2]}"] for t in free_slots]
                 print(f"list_time: {list_time}")
                 # print(f"list_buts: {list_buts}")
                 markup = types.InlineKeyboardMarkup(row_width=1)
+                # for text, data1 in list_time:
                 for text, data1 in list_time:
                     markup.insert(types.InlineKeyboardButton(text=text, callback_data=data1))
 
