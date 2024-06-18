@@ -30,10 +30,7 @@ HEADERS = {
 
 data = {
     "action": "login",
-    # "_csrf": "J6LWq2kyV44SVM3nZdr89HHS3-iMZHMmv0l06flOu-pG27zPIFkk3iE_qZUMiZ2cRIGVxfxWPHfZMTy5wSDerg==",
-    # "return_page": "",
     "username": config.loginUS,
-    # "text": config.loginUS,
     "password": config.pswUS
 }
 
@@ -74,13 +71,19 @@ async def echo_mess(message: types.Message):
 
 def get_html(staff_id, type_req, search_date):
     print("Смотрим ссылку.")
-    link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
+    link2 = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
     # link = (f"https://dev-us.gblnet.net//oper/index.php?core_section=task_list&"
             f"filter_selector0=task_state&task_state0_value=1&"
             f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
             f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
             f"filter_selector2=task_staff_wo_division&employee_find_input=&"
             f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
+    link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
+            f"filter_selector0=task_state&task_state0_value=1&"
+            f"filter_selector1=task_type&task_type1_value%5B%5D=7&"
+            f"task_type1_value%5B%5D=31&task_type1_value%5B%5D=1&"
+            f"task_type1_value%5B%5D=41&filter_selector2=task_staff_wo_division&"
+            f"employee_find_input=&employee_id2={staff_id}&sort=datedo&sort_typer=1")
     print(link)
 
     try:
@@ -291,8 +294,12 @@ async def echo_mess(message: types.Message):
                 text_msg_list = text_msg.split("\n")
                 print(f"text_msg: {text_msg}")
                 print(f"text_msg_list: {text_msg_list}")
-                print(f"text_msg_list: {text_msg_list[4]}")
-                print(f"text_msg_list: {text_msg_list[7]}")
+                # Достанем номер заявки
+                # TODO тут только для 7ми значных сервисов
+                num_service = text_msg_list[-1][-7:]
+                print(f"номер заявки: {num_service}")
+                # print(f"text_msg_list: {text_msg_list[4]}")
+                # print(f"text_msg_list: {text_msg_list[7]}")
                 # await bot.send_message(message.chat.id,
                 #                        f"Переносим адрес: \n\n"
                 #                        f"{text_msg_list[4]} \n\n"
@@ -305,7 +312,7 @@ async def echo_mess(message: types.Message):
                 #              ("12:00 20.06.2024", "10:00 20.06.2024"),
                 #              ("10:00 21.06.2024", "10:00 21.06.2024")]
                 # list_time = [[f"{t}:00 21.06.2024", f"{t}:00 21.06.2024"] for t in range(10, 17)]
-                list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {t[2]}"] for t in free_slots]
+                list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {num_service}"] for t in free_slots]
                 print(f"list_time: {list_time}")
                 # print(f"list_buts: {list_buts}")
                 markup = types.InlineKeyboardMarkup(row_width=1)
@@ -319,14 +326,19 @@ async def echo_mess(message: types.Message):
         await bot.send_message(message.chat.id, "Вы не авторизованны")
 
 
-def change_time_task(id_task, new_date):
+def change_time_task(task):
     # Дата формата 10:00 20.06.2024, необходимо разделить на 3 элемента, дату, часы, минуты
     # Заменим ":" пробелом и разделим по пробелу
-    new_date_lst = new_date.replace(":", " ")
+    new_date_lst = task.replace(":", " ")
     new_date_lst = new_date_lst.split(" ")
     datedo = new_date_lst[2]
     timedo = new_date_lst[0]
     timedo1 = new_date_lst[1]
+    id_task = new_date_lst[3]
+    print(f"datedo {datedo}")
+    print(f"datedo {timedo}")
+    print(f"datedo {timedo1}")
+    print(f"datedo {id_task}")
     data_task_done = {
         "core_section": "task",
         "action": "date_work_save",
@@ -345,8 +357,9 @@ async def time_callback(callback: types.CallbackQuery):
     print(callback)
     # await bot.send_message(message.chat.id, f"")
     # await callback.answer("Заявка перенесена.")
-    # change_time_task(1417760, callback.data)
-    await bot.send_message(callback.from_user.id, f"Заява перенесена на {callback.data}")
+    change_time_task(callback.data)
+    await bot.send_message(callback.from_user.id, f"Заява перенесена(но это не точно)"
+                                                  f" на {callback.data}")
 
 
 if __name__ == '__main__':
