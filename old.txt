@@ -1,0 +1,21 @@
+
+
+# Старый функционал вывода подключений мастера за один день одним собщенияем для наглядности
+# if date_time == date[-5:]:
+#     date_time = "!!! Внимание, есть другая заявка на: " + date_time
+# else:
+#     date_time = date[-5:]
+# one = (f"{date_time}\n\n"
+#        f"{address_f}\n\n"
+#        f"{conn_link}\n\n"
+#        f"###########################\n\n")
+# if date_start == date[:-5]:  # Тот же день
+#     print("Дата совпала")
+#     date_arr += one
+# else:
+#     if date_arr != "":
+#         answer.append(date_arr)
+#     date_start = date[:-5]
+#     date_arr = f"{date[:-5]}\n\n"
+#     date_arr += one
+# # print(date_arr)

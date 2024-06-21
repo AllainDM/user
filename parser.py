@@ -17,35 +17,27 @@ data_users = {
     "password": config.pswUS
 }
 
-session_users = requests.Session()
-
-full_link = ("https://us.gblnet.net/oper/index.php?core_section=task_list&"
-             "filter_selector0=task_state&task_state0_value=1&"
-             "filter_selector1=task_type&task_type1_value%5b%5d=31&task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
-             "filter_selector2=task_staff_wo_division&employee_find_input=&employee_id2=855&sort=datedo&sort_typer=1")
-
-
-def create_users_sessions():
-    while True:
-        try:
-            response_users2 = session_users.post(url_login, data=data_users, headers=HEADERS).text
-            # session_users.post(url_login, data=data_users, headers=HEADERS)
-            print("Сессия Юзера создана 3")
-            return response_users2
-        except ConnectionError:
-            print("Ошибка создания сессии")
-            # TODO функция отправки тут отсутствует
-            # send_telegram("Ошибка создания сессии UserSide, повтор запроса через 5 минут")
-            # time.sleep(300)
+# session_users = requests.Session()
+#
+#
+# def create_users_sessions():
+#     while True:
+#         try:
+#             response_users2 = session_users.post(url_login, data=data_users, headers=HEADERS).text
+#             # session_users.post(url_login, data=data_users, headers=HEADERS)
+#             print("Сессия Юзера создана 3")
+#             return response_users2
+#         except ConnectionError:
+#             print("Ошибка создания сессии")
+#             # TODO функция отправки тут отсутствует
+#             # send_telegram("Ошибка создания сессии UserSide, повтор запроса через 5 минут")
+#             # time.sleep(300)
+#
+#
+# response_users = create_users_sessions()
 
 
-response_users = create_users_sessions()
-
-# Коряков 855
-# Куропятников 877
-
-
-def get_html(staff_id):
+def get_html(session_users, staff_id):
     link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
             f"filter_selector0=task_state&task_state0_value=1&"
             f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
@@ -54,6 +46,7 @@ def get_html(staff_id):
             f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
 
     try:
+        # session_users = requests.Session()
         html = session_users.get(link)
         if html.status_code == 200:
             soup = BeautifulSoup(html.text, 'lxml')
@@ -63,3 +56,44 @@ def get_html(staff_id):
             print("error")
     except requests.exceptions.TooManyRedirects as e:
         print(f'{link} : {e}')
+
+
+def get_master(session_users, link):
+    print(f"parser.get_master Парсим ссылку: {link}")
+    try:
+        html = session_users.get(link)
+        if html.status_code == 200:
+            soup = BeautifulSoup(html.text, 'lxml')
+            table = soup.find_all('div', class_="j_card_div")
+            masters_list_id = []  # Тут запишем ид всем назначенных мастеров.
+            for tab in table:
+                search_masters = tab.find_all('div', class_='div_caption')
+                # Выше мы получаем список. В первом элементе ищем нужное нам описание.
+                # Ищем слово "Исполнители"
+                # В случае нахорждения перебираем весь элемент в поисках ссылок.
+                if search_masters[0].text.strip() == 'Исполнители':
+                    print("Найдены исполнители.")
+                    masters = tab.find_all('a')
+                    # Перебираем все ссылки в элементе
+                    for m_link in masters:
+                        # Делим ссылку по =, ищем show&id, предпоследним элементом.
+                        # ид мастера последний элемент.
+                        # print(f"m_link.get('href') {m_link.get('href')}")
+                        m_lst = m_link.get('href').split("=")
+                        try:
+                            if m_lst[-2] == "show&id":
+                                print("Найдена ссылка на мастера.")
+                                masters_list_id.append(m_lst[-1])
+                        except IndexError:
+                            ...
+            print(masters_list_id)
+            return masters_list_id
+
+        else:
+            print("error")
+    except requests.exceptions.TooManyRedirects as e:
+        print(f'{link} : {e}')
+
+
+def get_address(link):
+    ...
