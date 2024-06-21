@@ -249,10 +249,8 @@ async def echo_mess(message: types.Message):
         # В противоположном случае обрабатываем переносы заявок.
         # Или через ключевое слово "перенести" ответом на ранее выданную заявку мастера.
         # Или ссылку/7-ми значный номер сервисной заявки, для получения расписания перед получением вариантов переноса.
-
         else:
             print("Не ид.")
-            print(len(message.text))
             # Проверим сразу три подходящих варианта для переноса заявок.
             # Первые два это ссылка или просто 7-ми значный номер.
             # Для обработки ссылки разделим сообщение по =.
@@ -261,47 +259,37 @@ async def echo_mess(message: types.Message):
             # Третим вариантом является ключевое слово "перенести".
             message_lst = message.text.split("=")
             if len(message_lst[-1]) == 7 and message_lst[-1].isdigit() or message.text.lower() == "перенести":
-                print(f"Тут номер заявки.")
-                print(message_lst)
-                print(message_lst[-1])
+                # print(f"Тут номер заявки.")
+                # print(message_lst)
+                # print(message_lst[-1])
+                num_service = ""  # Номер заявки.
+                address = ""    # Адрес.
+                link_service = ""  # Ссылка на заявку.
                 # При ключевом слове "перенести" мы уже тыкаем на полученное сообщение от бота с заявкой.
                 if message.text.lower() == "перенести":
-                    # При ключевом слове "перенести" необходимо отвечать на сообщение от бота.
-                    # Из которого подтянется инфа о заявке.
+                    print("Испоьзовано ключевое слово 'перенести'.")
+                    # При ключевом слове "перенести" необходимо отвечать на сообщение от бота,
+                    # из которого подтянется инфа о заявке.
                     if message.reply_to_message:
+                        print("Ключевое слово 'перенести' использовано как ответ на сообщение бота.")
                         text_msg = message.reply_to_message.text
                         # Разделим сообщение по переносу строки.
                         # Адрес будем брать как 4 элемент. А ссылку как 8 элемент.
                         text_msg_list = text_msg.split("\n")
-                        print(f"text_msg: {text_msg}")
-                        print(f"text_msg_list: {text_msg_list}")
+                        print(f"text_msg_list {text_msg_list}")
                         # Достанем номер заявки
                         # ! Только для 7-ми значных сервисов.
-                        num_service = text_msg_list[-1][-7:]
-                        address = text_msg_list[4]  # Адрес для ответа боту.
+                        try:
+                            num_service = text_msg_list[-1][-7:]  # Номер заявки
+                            address = text_msg_list[4]  # Адрес для ответа боту.
+                            link_service = text_msg_list[7]  # Ссылка на заявку.
+                        except IndexError:
+                            await bot.send_message(message.chat.id, "Произошла ошибка 1.")
                         # TODO необходимо обработать вариант ошибки,
                         #  когда пишут "перенести" в ответ на левое сообщение.
                         print(f"address {address}")
                         print(f"номер заявки: {num_service}")
-                        # Сделаем запрос к заявкам, чтобы составить расписание.
-                        # TODO на данный момент берется ид того, кто переносит.
-                        # TODO необходимо находить ид мастера по исполнителю
-                        answer = get_html(config.users_id_dict[user_id], "shelude", "")
-                        # Поиск свободного времени
-                        # TODO используем заглушку на номер дома
-                        free_slots = free_time.free_time(answer, 15517)
-                        print(f"free_slots {free_slots}")
-                        print(f"answer {answer}")
-                        main_text = (f"Переносим адрес: \n\n"
-                                     f"{address} \n\n"
-                                     f"Выберите время:")
-                        list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {num_service}"] for t in free_slots]
-                        print(f"list_time: {list_time}")
-                        markup = types.InlineKeyboardMarkup(row_width=1)
-                        for text, data1 in list_time:
-                            markup.insert(types.InlineKeyboardButton(text=text, callback_data=data1))
-
-                        await message.answer(main_text, reply_markup=markup)
+                        print(f"Ссылка на заявку: {link_service}")
                     else:
                         await bot.send_message(message.chat.id,
                                                "Ключевое слово 'перенести' "
@@ -309,14 +297,35 @@ async def echo_mess(message: types.Message):
                                                "по заранее запрошенным заявка мастера, "
                                                "в виде простого сообщения с ид мастера. "
                                                "Ид некоторых мастеров можно получить командой /help.")
-
                 # Вариант с ссылкой или с 7-ми значным номером заявки.
                 elif len(message_lst[-1]) == 7 and message_lst[-1].isdigit():
                     link_service = f"http://us.gblnet.net/oper/?core_section=task&action=show&id={message_lst[-1]}"
                     print(f"link_service: {link_service}")
-                    # Первым аргументом передаем сессию, так как используется отдельный модуль.
-                    masters = parser.get_master(session, link_service)
-                    print(f"Получаем ид мастеров: {masters}")
+
+                # Собираем расписение
+                # Получим ид исполнителей
+                # Первым аргументом передаем сессию, так как используется отдельный модуль.
+                masters = parser.get_master(session, link_service)
+                print(f"Получаем ид мастеров: {masters}")
+                # Сделаем запрос к заявкам, чтобы составить расписание.
+                answer = get_html(config.users_id_dict[user_id], "shelude", "")
+                # Поиск свободного времени
+                # TODO используем заглушку на номер дома
+                free_slots = free_time.free_time(answer, 15517)
+                print(f"free_slots {free_slots}")
+                print(f"answer {answer}")
+
+                # Х. Тут мы собираем ответ боту.
+                main_text = (f"Переносим адрес: \n\n"
+                             f"{address} \n\n"
+                             f"Выберите время:")
+                list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {num_service}"] for t in free_slots]
+                print(f"list_time: {list_time}")
+                markup = types.InlineKeyboardMarkup(row_width=1)
+                for text, data1 in list_time:
+                    markup.insert(types.InlineKeyboardButton(text=text, callback_data=data1))
+
+                await message.answer(main_text, reply_markup=markup)
 
     else:
         await bot.send_message(message.chat.id, "Вы не авторизованны")
