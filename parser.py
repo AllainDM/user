@@ -37,25 +37,25 @@ data_users = {
 # response_users = create_users_sessions()
 
 
-def get_html(session_users, staff_id):
-    link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
-            f"filter_selector0=task_state&task_state0_value=1&"
-            f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
-            f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
-            f"filter_selector2=task_staff_wo_division&employee_find_input=&"
-            f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
-
-    try:
-        # session_users = requests.Session()
-        html = session_users.get(link)
-        if html.status_code == 200:
-            soup = BeautifulSoup(html.text, 'lxml')
-            table = soup.find_all('tr', class_="cursor_pointer")
-            print(table)
-        else:
-            print("error")
-    except requests.exceptions.TooManyRedirects as e:
-        print(f'{link} : {e}')
+# def get_html(session_users, staff_id):
+#     link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
+#             f"filter_selector0=task_state&task_state0_value=1&"
+#             f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
+#             f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
+#             f"filter_selector2=task_staff_wo_division&employee_find_input=&"
+#             f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
+#
+#     try:
+#         # session_users = requests.Session()
+#         html = session_users.get(link)
+#         if html.status_code == 200:
+#             soup = BeautifulSoup(html.text, 'lxml')
+#             table = soup.find_all('tr', class_="cursor_pointer")
+#             print(table)
+#         else:
+#             print("error")
+#     except requests.exceptions.TooManyRedirects as e:
+#         print(f'{link} : {e}')
 
 
 def get_master(session_users, link):
@@ -95,5 +95,33 @@ def get_master(session_users, link):
         print(f'{link} : {e}')
 
 
-def get_address(link):
-    ...
+def get_address(session_users, link):
+    print(f"parser.get_address Парсим ссылку: {link}")
+    try:
+        html = session_users.get(link)
+        if html.status_code == 200:
+            soup = BeautifulSoup(html.text, 'lxml')
+            table = soup.find('table', class_="j_table")
+            # Ищем ссылки, адрес хранится в одной из них.
+            table_a = table.find_all('a')
+            print("Парсим ссылки")
+            print(table_a)
+            if table_a:
+                for i in table_a:
+                    if 'Россия' in i.text:  # В адресе всегда есть страна
+                        print(f"get_address: {i.text}")
+                        # Необходимо вернуть ид дома, он в конце ссылки с адресом.
+                        id_link = i.get('href').split("=")
+                        print(f"id_link: {id_link}")
+                        id_link = id_link[-1]
+                        print(f"id_link: {id_link}")
+                        # На всякий случай(и для тестов) кроме ид вернем адрес.
+                        return id_link, i.text
+            # TODO проверить вывод в случае неподходящей ссылки.
+            # TODO пользователю должно возвращаться предупреждение.
+            # else:
+            #     return ""
+        else:
+            print("error")
+    except requests.exceptions.TooManyRedirects as e:
+        print(f'{link} : {e}')

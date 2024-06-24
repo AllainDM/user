@@ -302,14 +302,26 @@ async def echo_mess(message: types.Message):
                     link_service = f"http://us.gblnet.net/oper/?core_section=task&action=show&id={message_lst[-1]}"
                     print(f"link_service: {link_service}")
 
-                # Собираем расписение
+                # Собираем расписание
+                # Оповещение пользователя
+                await bot.send_message(message.chat.id, "Производится поиск исполнителя...")
                 # Получим ид исполнителей
                 # Первым аргументом передаем сессию, так как используется отдельный модуль.
                 masters = parser.get_master(session, link_service)
                 print(f"Получаем ид мастеров: {masters}")
                 # Сделаем запрос к заявкам, чтобы составить расписание.
                 answer = get_html(config.users_id_dict[user_id], "shelude", "")
+
                 # Поиск свободного времени
+                # Оповещение пользователя
+                await bot.send_message(message.chat.id, "Производится поиск адреса...")
+                # Парсим ссылку на дом, чтобы получить его ид.
+                # Так же аргументом передаем сессию.
+                # Кроме ид возвращается адресс в виде строки.
+                address_id, address_text = parser.get_address(session_users=session, link=link_service)
+                print(f"Получаем от парсера ид и адрес дома: {address_id, address_text}")
+                # Оповещение пользователя
+                await bot.send_message(message.chat.id, "Составляется расписание...")
                 # TODO используем заглушку на номер дома
                 free_slots = free_time.free_time(answer, 15517)
                 print(f"free_slots {free_slots}")
@@ -317,7 +329,7 @@ async def echo_mess(message: types.Message):
 
                 # Х. Тут мы собираем ответ боту.
                 main_text = (f"Переносим адрес: \n\n"
-                             f"{address} \n\n"
+                             f"{address_text} \n\n"
                              f"Выберите время:")
                 list_time = [[f"{t[0]} {t[2]} {t[1]}:00", f"{t[1]}:00 {t[0]} {num_service}"] for t in free_slots]
                 print(f"list_time: {list_time}")
