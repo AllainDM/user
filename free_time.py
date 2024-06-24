@@ -15,36 +15,40 @@ day_weeks_name = {
 }
 
 
-def free_time(lst, address):
+def free_time(lst, shelude):
     date_now = datetime.now()
     print("Вывод дня недели.")
     print(date_now.weekday())
     date_now_format = date_now.strftime("%d.%m.%Y")
+
+    # Первый вариант с расписаниями сохраненными в этой программе.
+    # Теперь передаем готовое расписание вхятое с дома.
     # Составим расписание на свободное время.
     # Найдем расписание в списке.
     # В первую очередь ищем в уникальных значениях.
-    shelude = {}
-    if address in address_and_time.dict_time_address:
-        print("Уникальное время.")
-        shelude = address_and_time.dict_time_address[address]
-        print(f"shelude {shelude}")
-
-    elif address in address_and_time.list_standart_five:
-        print("Дом в стандартной пятидневке.")
-        shelude = address_and_time.dict_time_address["standart_five"]
-        print(f"shelude {shelude}")
-
-    elif address in address_and_time.list_standart_seven:
-        print("Доступ в любое время. Добавить 20:00 ?")
-        shelude = address_and_time.dict_time_address["standart_seven"]
-        print(f"shelude {shelude}")
+    # shelude = {}
+    # if address in address_and_time.dict_time_address:
+    #     print("Уникальное время.")
+    #     shelude = address_and_time.dict_time_address[address]
+    #     print(f"shelude {shelude}")
+    #
+    # elif address in address_and_time.list_standart_five:
+    #     print("Дом в стандартной пятидневке.")
+    #     shelude = address_and_time.dict_time_address["standart_five"]
+    #     print(f"shelude {shelude}")
+    #
+    # elif address in address_and_time.list_standart_seven:
+    #     print("Доступ в любое время. Добавить 20:00 ?")
+    #     shelude = address_and_time.dict_time_address["standart_seven"]
+    #     print(f"shelude {shelude}")
 
     free_time_lst = []
     print("Вывод расписания.")
     for _, v in shelude.items():
         print(v)
 
-    while True:
+    # while True:
+    for _ in range(100):  # TODO временный(а может нет) вариант, обработки ошибки когда расписание пустое.
         print("Идем по циклу.")
         # Начинаем с день + 1, с завтра. Так же на каждой итерации добавляется 1 день.
         date_now = date_now + timedelta(1)

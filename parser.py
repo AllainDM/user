@@ -117,10 +117,71 @@ def get_address(session_users, link):
                         print(f"id_link: {id_link}")
                         # На всякий случай(и для тестов) кроме ид вернем адрес.
                         return id_link, i.text
+                return "", ""
             # TODO проверить вывод в случае неподходящей ссылки.
             # TODO пользователю должно возвращаться предупреждение.
-            # else:
-            #     return ""
+            else:
+                return "", ""
+        else:
+            print("error")
+    except requests.exceptions.TooManyRedirects as e:
+        print(f'{link} : {e}')
+
+
+# Составим потенциальное расписание на доме.
+# TODO необходимо выполнить обработку ошибки, если расписания нет.
+# TODO ибо оно может зависнуть в бесконечном цикле в поиске 10 слотов.
+def get_shelude(session_users, link):
+    print(f"parser.get_shelude Парсим ссылку: {link}")
+    try:
+        html = session_users.get(link)
+        if html.status_code == 200:
+            soup = BeautifulSoup(html.text, 'lxml')
+            table = soup.find('div', id="tableTaskIntervalId")
+            # Необсходимо вернуть словарь,
+            # где ключ порядковый номер дня недели(с 1),
+            # а значение список с доступными часами.
+            dict_time_address = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
+            # print(table)
+            # table_input = table.find_all("input", class_="input_box")
+            # Переберем заготовленный словарь, подствляя ключи в ид элемента.
+            print("Страничка найдена, начинаем перебор словаря.")
+            for k, v in dict_time_address.items():
+                # В Юзере у последнего дня используется не 7, а 0.
+                if k == 7:
+                    k = 0
+                print(f"Перебираем: {k}, {v}")
+                # Начало расписание от первого значения.
+                start_hour = int(table.find('input', {'name': f'start_{k}'}).get('value'))
+                finish = int(table.find('input', {'name': f'finish_{k}'}).get('value'))
+                print(f"start_hour {start_hour}")
+                print(f"finish {finish}")
+                # Если стартовый час не 0, то перебираем день.
+                if start_hour != 0:
+                    print("Стартовый час НЕ равен 0")
+                    # Запускает бесконечный цикл добавляя по 2 часа пока последний час не больше стартового.
+                    while True:
+                        print("Начинаем бесконечный цикл")
+                        # Если стартовый час <= последнему часу.
+                        if start_hour <= finish:
+                            print("Стартовый час меньше последнего.")
+                            # Добавляем в список к тому дню, который перебираем.
+                            v.append(start_hour)
+                            print(f"Список обновлен: {v}")
+                            # Добавляем 2 часа.
+                            start_hour += 2
+                        else:  # Иначе прерываем цикл.
+                            print("Прерываем цикл.")
+                            break
+                # Если стартовый час 0, то пропускаем итерацию.
+                else:
+                    print("Стартовый час равен 0")
+                    continue
+                print(f"Составлено расписание для: {k}, вышло: {v}")
+                print("№№№№№№№№№№№№№№№№№№№№№№№№")
+            print("Итог")
+            print(dict_time_address)
+            return dict_time_address
         else:
             print("error")
     except requests.exceptions.TooManyRedirects as e:

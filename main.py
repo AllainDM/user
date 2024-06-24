@@ -56,7 +56,6 @@ def create_sessions():
             print("Ошибка создания сессии")
             time.sleep(60)
 
-
 # Тестовая функция
 @dp.message_handler(commands=['0'])
 async def echo_mess(message: types.Message):
@@ -69,6 +68,9 @@ async def echo_mess(message: types.Message):
     await bot.send_message(message.chat.id, f"{config.users_dict}")
 
 
+# TODO перенести парсер в модуль с парсерами. Потребуется передачи сессии.
+# !!! Тут же при обработке ошибки вызывается создание сессии из основного файла
+# Вызов создания сессии можно оставить в основном файле как обратотка возврата пустого ответа
 def get_html(staff_id, type_req, search_date):
     print("Смотрим ссылку.")
     link2 = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
@@ -78,6 +80,7 @@ def get_html(staff_id, type_req, search_date):
             f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
             f"filter_selector2=task_staff_wo_division&employee_find_input=&"
             f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
+    # TODO Тестовая ссылк включает в себя замену замка
     link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
             f"filter_selector0=task_state&task_state0_value=1&"
             f"filter_selector1=task_type&task_type1_value%5B%5D=7&"
@@ -178,6 +181,7 @@ def get_html(staff_id, type_req, search_date):
     #     print(f'{e}: {link}')
 
 
+# Получение заявок мастера. Определяется по ид. Список в конфиге.
 @dp.message_handler(commands=['сегодня', 'завтра', 'послезавтра'])
 async def today(message: types.Message):
     # Получим ид пользователя и сравним со списком разрешенных в файле конфига
@@ -302,28 +306,50 @@ async def echo_mess(message: types.Message):
                     link_service = f"http://us.gblnet.net/oper/?core_section=task&action=show&id={message_lst[-1]}"
                     print(f"link_service: {link_service}")
 
-                # Собираем расписание
-                # Оповещение пользователя
+                # Собираем расписание.
+                # Поиск ид исполнителей.
+                # Оповещение пользователя.
                 await bot.send_message(message.chat.id, "Производится поиск исполнителя...")
-                # Получим ид исполнителей
                 # Первым аргументом передаем сессию, так как используется отдельный модуль.
                 masters = parser.get_master(session, link_service)
+                # Оповещение об ошибке. Возвращается пустой список.
+                if not masters:
+                    await bot.send_message(message.chat.id, "!!! Внимание. "
+                                                            "Исполнитель не обнаружен, проверьте ссылку/номер заявки.")
+                    return
                 print(f"Получаем ид мастеров: {masters}")
-                # Сделаем запрос к заявкам, чтобы составить расписание.
-                answer = get_html(config.users_id_dict[user_id], "shelude", "")
 
-                # Поиск свободного времени
-                # Оповещение пользователя
+                # Поиск ид адреса.
+                # Оповещение пользователя.
                 await bot.send_message(message.chat.id, "Производится поиск адреса...")
                 # Парсим ссылку на дом, чтобы получить его ид.
-                # Так же аргументом передаем сессию.
+                # Так же аргументом передаем сессию, так как используется отдельный модуль.
                 # Кроме ид возвращается адресс в виде строки.
                 address_id, address_text = parser.get_address(session_users=session, link=link_service)
+                # Оповещение об ошибке. И то и то возвращается ввиде пустой строки.
+                if address_id == "" or address_text == "":
+                    await bot.send_message(message.chat.id, "!!! Внимание. "
+                                                            "Адрес не обнаружен, проверьте ссылку/номер заявки.")
+                    return
                 print(f"Получаем от парсера ид и адрес дома: {address_id, address_text}")
+
+                # Поиск потенциальных слотов на доме, из вкладки редактрования основной информации.
                 # Оповещение пользователя
                 await bot.send_message(message.chat.id, "Составляется расписание...")
-                # TODO используем заглушку на номер дома
-                free_slots = free_time.free_time(answer, 15517)
+                # Получим потенциальные слоты по дням недели.
+                address_shelude = parser.get_shelude(session_users=session,
+                                                     link=f"https://us.gblnet.net/oper/?core_section="
+                                                          f"address_building&action="
+                                                          f"edit&id={address_id}")
+
+                # Запросим все текущие заявки последнего исполнителя.
+                # Аргумент type_req это тип запроса. Функция работает в разных режимах.
+                # По другому запросу мастера выдает все его заявки сообщениями в тг.
+                # Аргумент с датой так же для другого типа запроса.
+                answer = get_html(masters[-1], "shelude", "")
+
+                # Соберем свободные слоты. Передаем занятые слоты мастера и понетциальный слоты на доме.
+                free_slots = free_time.free_time(answer, address_shelude)
                 print(f"free_slots {free_slots}")
                 print(f"answer {answer}")
 
