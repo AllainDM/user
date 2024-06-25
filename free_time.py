@@ -15,13 +15,6 @@ day_weeks_name = {
 }
 
 
-# Тестовая функция с принтами.
-def print(text):
-    ...
-    # if print_need:
-    #     print(text)
-
-
 def free_time(lst, shelude):
     date_now = datetime.now()
     print("Вывод дня недели.")
@@ -56,29 +49,35 @@ def free_time(lst, shelude):
 
     # while True:
     for _ in range(100):  # TODO временный(а может нет) вариант, обработки ошибки когда расписание пустое.
-        print("Идем по циклу.")
+        # print("Идем по циклу.")
         # Начинаем с день + 1, с завтра. Так же на каждой итерации добавляется 1 день.
         date_now = date_now + timedelta(1)
         day_week = date_now.weekday() + 1  # +1 чтобы понедельник был 1, а не 0.
         date_now_format = date_now.strftime("%d.%m.%Y")  # Формат для сравнения с уже существующими заявками.
-        print(f"date_now_format {date_now_format}")
-        print(f"day_week {day_week}")
+        # print(f"date_now_format {date_now_format}")
+        # print(f"day_week {day_week}")
         # Соберем дату как в забитом расписании, для удобства сравнения со списком.
         # Но сначала найдем свободный день и время в базовом расписании.
         # Пройдемся по часам в выбранном дне.
-        print(f"shelude[day_week] {shelude[day_week]}")
+        # print(f"shelude[day_week] {shelude[day_week]}")
         for t in shelude[day_week]:
             check_time = [date_now_format, str(t)]  # Соберем дату как в забитом расписании.
-            print(f"check_time {check_time}")
+            # print(f"check_time {check_time}")
 
             if check_time in lst:  # Поиск совпадения в текущем расписании.
-                print(f"check_time {check_time} есть в расписании.")
+                # print(f"check_time {check_time} есть в расписании.")
                 continue
             else:
-                print(f"check_time {check_time} НЕТ в расписании.")
-                # Добавим в слот назвавние дня недели.
-                check_time.append(day_weeks_name[day_week])
-                free_time_lst.append(check_time)
+                # Дополнительно проверим на минус 1 час в неправильно выставленных заявках
+                check_time_hour = [date_now_format, str(t-1)]
+                if check_time_hour in lst:
+                    print(f"Внимание, в расписании есть выставленная на -1 час заявка: {check_time_hour}")
+                    continue
+                else:
+                    # print(f"check_time {check_time} и  check_time_hour {check_time_hour} НЕТ в расписании.")
+                    # Добавим в слот назвавние дня недели.
+                    check_time.append(day_weeks_name[day_week])
+                    free_time_lst.append(check_time)
         # Выйдем из цикла после сбора 10 слотов.
         if len(free_time_lst) > 10:
             return free_time_lst
