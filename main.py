@@ -188,7 +188,7 @@ def get_html(staff_id, type_req, search_date):
     print(link)
 
     try:
-        print("Проверяем сессию.")
+        print("Проверяем сессию. 1")
         html = session.get(link)
         if html.status_code == 200:
             print("Код ответа 200")
@@ -474,19 +474,32 @@ async def echo_mess(message: types.Message):
                                                       f"address_building&action="
                                                       f"edit&id={address_id}")
 
-            # Запросим все текущие заявки последнего исполнителя.
+            # Запросим все текущие заявки всех исполнителей.
             # Аргумент type_req это тип запроса. Функция работает в разных режимах.
             # По другому запросу мастера выдает все его заявки сообщениями в тг.
             # Аргумент с датой так же для другого типа запроса.
-            answer = get_html(masters[-1], "shelude", "")
+            print("Найдем все заявки мастеров.")
+            all_masters_shelude = []
+            for m in masters:
+                print(f"Ищем заявки для ид: {m}")
+                answer = get_html(m, "shelude", "")
+                print(f"Заявки найдены {answer}")
+                print("Добавим в список элементы по одному.")
+                # TODO научиться правильно сделать множества из вложенных списков.
+                for a in answer:
+                    print(a)
+                    if a not in all_masters_shelude:
+                        all_masters_shelude.append(a)
+
+            print(f"all_masters_shelude {all_masters_shelude}")
 
             # Соберем свободные слоты. Передаем занятые слоты мастера и понетциальный слоты на доме.
-            free_slots = free_time.free_time(answer, address_shelude)
+            free_slots = free_time.free_time(all_masters_shelude, address_shelude)
             if not free_slots:
                 await bot.send_message(message.chat.id, "!!! Расписание не обнаружено, проверьте адрес.")
                 return
             print(f"free_slots {free_slots}")
-            print(f"answer {answer}")
+            print(f"all_masters_shelude {all_masters_shelude}")
 
             # Х. Тут мы собираем ответ боту.
             main_text = (f"Переносим адрес: \n\n"

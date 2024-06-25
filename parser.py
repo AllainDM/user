@@ -79,7 +79,7 @@ def get_master(session_users, link):
                     for m_link in masters:
                         # Делим ссылку по =, ищем show&id, предпоследним элементом.
                         # ид мастера последний элемент.
-                        print(f"m_link.get('href') {m_link.get('href')}")
+                        # print(f"m_link.get('href') {m_link.get('href')}")
                         m_lst = m_link.get('href').split("=")
                         try:
                             if m_lst[-2] == "show&id":
