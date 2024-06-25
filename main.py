@@ -417,7 +417,8 @@ async def echo_mess(message: types.Message):
             # Этот вариант, когда в конце сообщения ид, но там может быть текст
             elif len(message_lst[-1]) == 7 and message_lst[-1].isdigit():
                 link_service = f"http://us.gblnet.net/oper/?core_section=task&action=show&id={message_lst[-1]}"
-                print(f"link_service: {link_service}")
+                print(f"link_service 2: {link_service}")
+                num_service = message_lst[-1]
             # Обработаем так же вариант, когда в ссылке после номера заяки идет текст
             else:
                 print("Обработка неизвестного значения.")
