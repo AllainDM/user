@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timedelta
+import json
 
 import requests
 from aiogram import Bot, Dispatcher, executor, types
@@ -55,6 +56,7 @@ def create_sessions():
         except:
             print("Ошибка создания сессии")
             time.sleep(60)
+
 
 # Тестовая функция
 @dp.message_handler(commands=['0'])
@@ -184,8 +186,6 @@ def get_html(staff_id, type_req, search_date):
 # Получение заявок мастера. Определяется по ид. Список в конфиге.
 @dp.message_handler(commands=['сегодня', 'завтра', 'послезавтра'])
 async def today(message: types.Message):
-    # Получим ид пользователя и сравним со списком разрешенных в файле конфига
-    user_id = message.from_user.id
     # Получим текущую дату
     date_now = datetime.now()
     start_day = date_now
@@ -199,7 +199,16 @@ async def today(message: types.Message):
     # Приведем дату в нужному формату
     date_now_format = start_day.strftime("%d.%m.%Y")
     print(f"Дата для поиска {date_now_format}")
-    if user_id in config.users:
+    # Получим ид пользователя и сравним со списком разрешенных в файле конфига
+    user_id = message.from_user.id
+    # Прочитам список пользователей из json.
+    try:
+        with open('users.json', 'r') as f:
+            data_json = json.load(f)
+    except FileNotFoundError:
+        print("Список пользоваталей в формате json не обнаружен.")
+    print(f"Список пользоватлей из json: {data_json['users']}")
+    if user_id in config.admins or user_id in data_json['users']:
         print("Пользователь авторизован 2.")
         print(args)
         # Второй аргумент у get_html это тип запроса, req = поиск и выдача пользователю
@@ -236,9 +245,14 @@ async def today(message: types.Message):
 async def echo_mess(message: types.Message):
     # Получим ид пользователя и сравним со списком разрешенных в файле конфига
     user_id = message.from_user.id
-    print(f"user_id {user_id}")
-    print(f"message.text {message.text}")
-    if user_id in config.users:
+    # Прочитам список пользователей из json.
+    try:
+        with open('users.json', 'r') as f:
+            data_json = json.load(f)
+    except FileNotFoundError:
+        print("Список пользоваталей в формате json не обнаружен.")
+    print(f"Список пользоватлей из json: {data_json['users']}")
+    if user_id in config.admins or user_id in data_json['users']:
         print("Пользователь авторизован.")
         # Если сообщение число похожее на ид мастера, то выдадим его подключения.
         if message.text.isdigit() and len(message.text) < 5:
@@ -280,13 +294,15 @@ async def echo_mess(message: types.Message):
                         # Разделим сообщение по переносу строки.
                         # Адрес будем брать как 4 элемент. А ссылку как 8 элемент.
                         text_msg_list = text_msg.split("\n")
+                        # Составим новый список удалив все пустые элементы.
+                        text_msg_list = [t for t in text_msg_list if text_msg_list != ""]
                         print(f"text_msg_list {text_msg_list}")
                         # Достанем номер заявки
                         # ! Только для 7-ми значных сервисов.
                         try:
                             num_service = text_msg_list[-1][-7:]  # Номер заявки
-                            address = text_msg_list[4]  # Адрес для ответа боту.
-                            link_service = text_msg_list[7]  # Ссылка на заявку.
+                            address = text_msg_list[2]  # Адрес для ответа боту.
+                            link_service = text_msg_list[-1]  # Ссылка на заявку.
                         except IndexError:
                             await bot.send_message(message.chat.id, "Произошла ошибка 1.")
                         # TODO необходимо обработать вариант ошибки,
@@ -350,6 +366,9 @@ async def echo_mess(message: types.Message):
 
                 # Соберем свободные слоты. Передаем занятые слоты мастера и понетциальный слоты на доме.
                 free_slots = free_time.free_time(answer, address_shelude)
+                if not free_slots:
+                    await bot.send_message(message.chat.id, "!!! Расписание не обнаружено, проверьте адрес.")
+                    return
                 print(f"free_slots {free_slots}")
                 print(f"answer {answer}")
 
@@ -398,8 +417,16 @@ async def time_callback(callback: types.CallbackQuery):
     print(callback.data)
     print(callback.values)  # Тут много разной инфы
     change_time_task(callback.data)
-    await bot.send_message(callback.from_user.id, f"Заява перенесена(но это не точно)"
-                                                  f" на {callback.data}")
+
+    # Получим ид пользователя и сравним со списком разрешенных в файле конфига
+    user_id = callback.from_user.id
+    print(f"Читаем ид юзера из callback.from_user.id {user_id}")
+    print("Менять расписание на тесте могут только админы.")
+    if user_id in config.admins:
+        await bot.send_message(callback.from_user.id, f"Заява перенесена(но это не точно)"
+                                                      f" на {callback.data}")
+    else:
+        await bot.send_message(callback.from_user.id, f"Вам не разрешено переносить заявки.")
 
 
 if __name__ == '__main__':

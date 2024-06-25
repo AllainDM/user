@@ -15,6 +15,13 @@ day_weeks_name = {
 }
 
 
+# Тестовая функция с принтами.
+def print(text):
+    ...
+    # if print_need:
+    #     print(text)
+
+
 def free_time(lst, shelude):
     date_now = datetime.now()
     print("Вывод дня недели.")
