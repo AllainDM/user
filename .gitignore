@@ -7,3 +7,5 @@ config.py
 
 # Пользователи
 users.json
+start_log.json
+all_users.json

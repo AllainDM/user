@@ -67,7 +67,103 @@ async def echo_mess(message: types.Message):
 # Тестовая функция
 @dp.message_handler(commands=['help'])
 async def echo_mess(message: types.Message):
-    await bot.send_message(message.chat.id, f"{config.users_dict}")
+    user_id = message.from_user.id
+    if user_id in config.admins:
+        await bot.send_message(message.chat.id, f"{config.users_dict}")
+
+
+# Добавление нового пользователя. Только для чтения.
+@dp.message_handler(commands=['добавить'])
+async def echo_mess(message: types.Message):
+    user_id = message.from_user.id
+    if user_id in config.admins:
+        # Получим и разделим аргументы на список
+        args = message.text.split(" ")
+        new_user = args[1]
+        # Второй аргумент должен быть число
+        if new_user.isdigit():
+            # Прочитам список пользователей из json.
+            try:
+                with open('users.json', 'r') as f:
+                    data_json = json.load(f)
+            except FileNotFoundError:
+                print("Список пользоваталей в формате json не обнаружен.")
+            if new_user not in data_json:
+                data_json["users"].append(int(new_user))
+                # Обновим json
+                try:
+                    with open("users.json", 'w') as f:
+                        json.dump(data_json, f, sort_keys=False, ensure_ascii=False, indent=4, separators=(',', ': '))
+                        await bot.send_message(message.chat.id, 'Пользователь добавлен.')
+                except FileNotFoundError:
+                    print(f"Файл 'users.json' куда-то потерялся, хотя только что был.")
+            else:
+                await bot.send_message(message.chat.id, f"Пользователь с ид {new_user} уже есть в базе.")
+        else:
+            await bot.send_message(message.chat.id, "После команды через пробел необходимо передать id пользователя.")
+
+
+# Стартовая функция, через нее будет получать ид пользователей.
+@dp.message_handler(commands=['старт', 'start'])
+async def echo_mess(message: types.Message):
+    print(message.from_user)
+    print(message.from_user["first_name"])
+    print(message.from_user["last_name"])
+    print(message.from_user["username"])
+    user_id = message.from_user.id
+    # Прочитам список пользователей из json.
+    try:
+        with open('users.json', 'r') as f:
+            data_json = json.load(f)
+    except FileNotFoundError:
+        print("Список пользоваталей в формате json не обнаружен.")
+    print(f"Список пользоватлей из json: {data_json['users']}")
+    if user_id in config.admins or user_id in data_json['users']:
+        await bot.send_message(message.chat.id, f"Вы авторизованы, "
+                                                f"можете спокойно пользоваться... хотя не факт что всем функционалом.")
+    else:
+        await bot.send_message(message.chat.id, f"Вы не авторизованы, ваш id: {user_id}")
+    # Запишем лог стучащихся.
+    # Сначала прочитаем лог из json.
+    print("Читаем лог из json.")
+    try:
+        with open('start_log.json', 'r') as f:
+            data_log = json.load(f)
+    except FileNotFoundError:
+        print("Список логов в формате json не обнаружен.")
+    print("Лог из json прочитан.")
+    date_now = datetime.now()
+    data_log[f"{date_now}"] = {
+            "user_id": user_id,
+            "first_name": message.from_user["first_name"],
+            "last_name": message.from_user["last_name"],
+            "username": message.from_user["username"]
+    }
+    try:
+        with open("start_log.json", 'w') as f:
+            json.dump(data_log, f, sort_keys=False, ensure_ascii=False, indent=4, separators=(',', ': '))
+    except FileNotFoundError:
+        print(f"Файл 'start_log.json' не найден")
+
+    # Так же составим отдельный список всех постучавшихся.
+    # Сначала прочитаем json.
+    print("Читаем all_users.json.")
+    try:
+        with open('all_users.json', 'r') as f:
+            all_users = json.load(f)
+    except FileNotFoundError:
+        print("Список логов в формате json не обнаружен.")
+    if str(user_id) not in all_users:
+        # Добавим пользоваетля если такой еще не стучался
+        all_users[f"{str(user_id)}"] = [message.from_user["first_name"],
+                                        message.from_user["last_name"],
+                                        message.from_user["username"]]
+        # Обновим json
+        try:
+            with open("all_users.json", 'w') as f:
+                json.dump(all_users, f, sort_keys=False, ensure_ascii=False, indent=4, separators=(',', ': '))
+        except FileNotFoundError:
+            print(f"Файл 'all_users.json' не найден")
 
 
 # TODO перенести парсер в модуль с парсерами. Потребуется передачи сессии.
