@@ -8,6 +8,7 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 from bs4 import BeautifulSoup
+import lxml
 
 import config
 import url
@@ -21,41 +22,63 @@ session = requests.Session()
 bot = Bot(token=config.BOT_API_TOKEN)
 dp = Dispatcher(bot)
 
-url_login = "http://us.gblnet.net/oper/"
-# url_login = "https://dev-us.gblnet.net/"
+url_login_get = "https://us.gblnet.net/"
+url_login = "https://us.gblnet.net/body/login"
 
 
 HEADERS = {
     "main": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:105.0) Gecko/20100101 Firefox/105.0"
 }
 
-data = {
-    "action": "login",
+data_users = {
+    "_csrf": '',
+    "return_page": "",
     "username": config.loginUS,
     "password": config.pswUS
 }
 
 
-try:
-    response = session.post(url_login, data=data, headers=HEADERS).text
-    print("Сессия Юзера создана 1")
-except:
-    print("Ошибка создания сессии, перезапустите программу")
+session_users = requests.Session()
+print(f"session_users {session_users}")
+# session_users.headers.update(HEADERS)
+
+req = session_users.get(url_login_get)
+# req = requests.get(url_login)
+
+soup = BeautifulSoup(req.content, 'html.parser')
+# print(soup)
+print("###################")
+scripts = soup.find_all('script')
+csrf_token = None
+for script in scripts:
+    if script.string is not None:
+        # print(script.string)
+        script_lst = script.string.split(" ")
+        # print(script_lst)
+        for num, val in enumerate(script_lst):
+            if val == "_csrf:":
+                csrf = script_lst[num+1]
+                csrf_token = csrf[1:-3]
+print(f"csrf {csrf_token}")
 
 
-def create_sessions():
-    global data
-    global response
-    # По бесконечному циклу запустим создание сессий
+def create_users_sessions():
     while True:
         try:
-            response = session.post(url_login, data=data, headers=HEADERS).text
+            data_users["_csrf"] = csrf_token
+            print(f"data_users {data_users}")
+            response_users2 = session_users.post(url_login, data=data_users, headers=HEADERS).text
             print("Сессия Юзера создана 2")
-            break
-        # except ConnectionError:
-        except:
+            print(f"response_users2 {response_users2}")
+            return response_users2
+        except ConnectionError:
             print("Ошибка создания сессии")
-            time.sleep(60)
+            # TODO функция отправки тут отсутствует
+            # send_telegram("Ошибка создания сессии UserSide, повтор запроса через 5 минут")
+            # time.sleep(300)
+
+
+response_users = create_users_sessions()
 
 
 # Тестовая функция
@@ -172,12 +195,11 @@ async def echo_mess(message: types.Message):
 def get_html(staff_id, type_req, search_date):
     print("Смотрим ссылку.")
     link2 = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
-    # link = (f"https://dev-us.gblnet.net//oper/index.php?core_section=task_list&"
-            f"filter_selector0=task_state&task_state0_value=1&"
-            f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
-            f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
-            f"filter_selector2=task_staff_wo_division&employee_find_input=&"
-            f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
+             f"filter_selector0=task_state&task_state0_value=1&"
+             f"filter_selector1=task_type&task_type1_value%5b%5d=31&"
+             f"task_type1_value%5b%5d=1&task_type1_value%5b%5d=41&"
+             f"filter_selector2=task_staff_wo_division&employee_find_input=&"
+             f"employee_id2={staff_id}&sort=datedo&sort_typer=1")
     # TODO Тестовая ссылк включает в себя замену замка
     link = (f"https://us.gblnet.net/oper/index.php?core_section=task_list&"
             f"filter_selector0=task_state&task_state0_value=1&"
@@ -189,7 +211,11 @@ def get_html(staff_id, type_req, search_date):
 
     try:
         print("Проверяем сессию. 1")
-        html = session.get(link)
+        HEADERS["_csrf"] = csrf_token
+        print(f"HEADERS: {HEADERS}")
+        print("Пытаемся получить страничку")
+        print(f"Токен: {csrf}")
+        html = session_users.get(link, headers=HEADERS)
         if html.status_code == 200:
             print("Код ответа 200")
             soup = BeautifulSoup(html.text, 'lxml')
@@ -272,7 +298,7 @@ def get_html(staff_id, type_req, search_date):
             print("error")
             return "нет"
     except:
-        create_sessions()
+        create_users_sessions()
         return ["Произошла ошибка сессии, бот залогинится снова, "
                 "попробуйте выполнить запрос позже, возможно программа даже не сломалась."]
     # except requests.exceptions.TooManyRedirects as e:
@@ -416,7 +442,8 @@ async def echo_mess(message: types.Message):
             # Вариант с ссылкой или с 7-ми значным номером заявки.
             # Этот вариант, когда в конце сообщения ид, но там может быть текст
             elif len(message_lst[-1]) == 7 and message_lst[-1].isdigit():
-                link_service = f"http://us.gblnet.net/oper/?core_section=task&action=show&id={message_lst[-1]}"
+                # f"http://us.gblnet.net/task/{num_service}"
+                link_service = f"http://us.gblnet.net/task/{message_lst[-1]}"
                 print(f"link_service 2: {link_service}")
                 num_service = message_lst[-1]
             # Обработаем так же вариант, когда в ссылке после номера заяки идет текст
@@ -430,8 +457,7 @@ async def echo_mess(message: types.Message):
                         try:
                             num_service = message_lst[k+1][0:7]
                             print(f"num_service1: {num_service}")
-                            link_service = (f"http://us.gblnet.net/oper/?core_section="
-                                            f"task&action=show&id={num_service}")
+                            link_service = f"http://us.gblnet.net/task/{num_service}"
 
                         except IndexError:
                             print("Что-то не так с этим списком.")
@@ -444,7 +470,7 @@ async def echo_mess(message: types.Message):
             # Оповещение пользователя.
             await bot.send_message(message.chat.id, "Производится поиск исполнителя...")
             # Первым аргументом передаем сессию, так как используется отдельный модуль.
-            masters = parser.get_master(session, link_service)
+            masters = parser.get_master(session_users, csrf_token, link_service)
             # Оповещение об ошибке. Возвращается пустой список.
             if not masters:
                 await bot.send_message(message.chat.id, "!!! Внимание. "
@@ -458,7 +484,7 @@ async def echo_mess(message: types.Message):
             # Парсим ссылку на дом, чтобы получить его ид.
             # Так же аргументом передаем сессию, так как используется отдельный модуль.
             # Кроме ид возвращается адресс в виде строки.
-            address_id, address_text = parser.get_address(session_users=session, link=link_service)
+            address_id, address_text = parser.get_address(session_users=session_users, csrf_token=csrf_token, link=link_service)
             # Оповещение об ошибке. И то и то возвращается ввиде пустой строки.
             if address_id == "" or address_text == "":
                 await bot.send_message(message.chat.id, "!!! Внимание. "
@@ -470,7 +496,7 @@ async def echo_mess(message: types.Message):
             # Оповещение пользователя
             await bot.send_message(message.chat.id, "Составляется расписание...")
             # Получим потенциальные слоты по дням недели.
-            address_shelude = parser.get_shelude(session_users=session,
+            address_shelude = parser.get_shelude(session_users=session_users, csrf_token=csrf_token,
                                                  link=f"https://us.gblnet.net/oper/?core_section="
                                                       f"address_building&action="
                                                       f"edit&id={address_id}")
